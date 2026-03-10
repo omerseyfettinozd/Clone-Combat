@@ -1,0 +1,405 @@
+using System.Collections.Generic;
+using Unity.Netcode;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+
+/// <summary>
+/// Central game manager. Handles spawning, respawning, ghost creation, and game-over.
+/// Merkezi oyun yöneticisi. Doğma, yeniden doğma, hayalet oluşturma ve oyun sonu yönetir.
+/// </summary>
+public class GameManager : NetworkBehaviour
+{
+    public static GameManager Instance { get; private set; }
+
+    [Header("Prefabs / Prefab'lar")]
+    [SerializeField] private GameObject _ghostPrefab;
+
+    [Header("Spawn Points / Doğuş Noktaları")]
+    [SerializeField] private Transform _spawnPointLeft;
+    [SerializeField] private Transform _spawnPointRight;
+
+    [Header("Bases / Üsler")]
+    [SerializeField] private BaseHealth _baseLeft;
+    [SerializeField] private BaseHealth _baseRight;
+
+    [Header("Weapons / Silahlar")]
+    [SerializeField] private WeaponData[] _availableWeapons; // 0=Pistol, 1=Assault, 2=Sniper
+    
+    public WeaponData[] AvailableWeapons => _availableWeapons;
+
+    [Header("Economy / Ekonomi")]
+    [SerializeField] private int _killReward = 25; // Öldürme başına coin ödülü
+
+    // Tüm aktif hayaletlerin listesi
+    private List<GameObject> _activeGhosts = new List<GameObject>();
+
+    private void Awake()
+    {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+        Instance = this;
+    }
+
+    public override void OnNetworkSpawn()
+    {
+        base.OnNetworkSpawn();
+
+        if (IsServer)
+        {
+            // Arena sahnesine geçildiğinde tüm oyuncuları spawn noktalarına taşı
+            PositionAllPlayersAtSpawnPoints();
+        }
+    }
+
+    /// <summary>
+    /// Moves all connected players to their team's spawn points.
+    /// Tüm bağlı oyuncuları takımlarının spawn noktalarına taşır.
+    /// </summary>
+    private void PositionAllPlayersAtSpawnPoints()
+    {
+        foreach (var kvp in NetworkManager.Singleton.ConnectedClients)
+        {
+            ulong clientId = kvp.Key;
+            NetworkObject playerObj = kvp.Value.PlayerObject;
+            if (playerObj == null) continue;
+
+            Transform spawnPoint = (clientId == NetworkManager.ServerClientId) ? _spawnPointLeft : _spawnPointRight;
+            if (spawnPoint == null)
+            {
+                Debug.LogWarning($"Spawn point for client {clientId} not assigned!");
+                continue;
+            }
+
+            // Sunucu tarafında pozisyonu ayarla
+            playerObj.transform.position = spawnPoint.position;
+
+            // ClientNetworkTransform owner-authoritative olduğu için,
+            // client'a da pozisyonunu güncelle demek lazım
+            TeleportPlayerClientRpc(spawnPoint.position, new ClientRpcParams
+            {
+                Send = new ClientRpcSendParams
+                {
+                    TargetClientIds = new[] { clientId }
+                }
+            });
+        }
+    }
+
+    [ClientRpc]
+    private void TeleportPlayerClientRpc(Vector3 position, ClientRpcParams rpcParams = default)
+    {
+        // Kendi oyuncumuzu spawn noktasına taşı
+        var localPlayer = NetworkManager.Singleton.LocalClient?.PlayerObject;
+        if (localPlayer != null)
+        {
+            localPlayer.transform.position = position;
+
+            // Rigidbody hızını sıfırla (lobideki momentum taşınmasın)
+            Rigidbody2D rb = localPlayer.GetComponent<Rigidbody2D>();
+            if (rb != null)
+            {
+                rb.linearVelocity = Vector2.zero;
+            }
+        }
+    }
+
+    public override void OnDestroy()
+    {
+        // Singleton temizliği
+        if (Instance == this)
+        {
+            Instance = null;
+        }
+    }
+
+    /// <summary>
+    /// Called when a player dies. Creates ghost and respawns player.
+    /// Oyuncu öldüğünde çağrılır. Hayalet oluşturur ve oyuncuyu yeniden doğurur.
+    /// </summary>
+    public void OnPlayerDied(ulong deadPlayerId, ulong killerClientId)
+    {
+        if (!IsServer) return;
+
+        // Öldüren oyuncuya coin ver
+        RewardKiller(killerClientId);
+
+        // Ölen oyuncunun kayıtlı verilerini al ve hayalet oluştur
+        if (!NetworkManager.Singleton.ConnectedClients.ContainsKey(deadPlayerId))
+        {
+            Debug.LogWarning($"Player {deadPlayerId} disconnected before death could be processed.");
+            return;
+        }
+
+        NetworkObject deadPlayerNetObj = NetworkManager.Singleton.ConnectedClients[deadPlayerId].PlayerObject;
+        if (deadPlayerNetObj == null) return;
+
+        // --- DEĞİŞİKLİK: Kayıt verileri SADECE İlgili Client'ta (Owner) bulunur. ---
+        // Bu yüzden ClientRpc ile verileri istemeli ve ardından ServerRpc ile hayaleti oluşturmalıyız.
+        GhostRecorder recorder = deadPlayerNetObj.GetComponent<GhostRecorder>();
+        if (recorder != null)
+        {
+            // Client'tan verileri toplayıp ServerRpc ile dönmesini isteyeceğiz.
+            recorder.RequestFramesAndSpawnGhostClientRpc();
+        }
+
+        // Oyuncuyu gizle (ölü durumda beklet - shop seçimi yapana kadar)
+        HidePlayerClientRpc(new ClientRpcParams
+        {
+            Send = new ClientRpcSendParams
+            {
+                TargetClientIds = new[] { deadPlayerId }
+            }
+        });
+
+        // Ölüm mağazasını göster (client tarafında)
+        ShowDeathShopClientRpc(new ClientRpcParams
+        {
+            Send = new ClientRpcSendParams
+            {
+                TargetClientIds = new[] { deadPlayerId }
+            }
+        });
+    }
+
+    /// <summary>
+    /// ServerRpc called by GhostRecorder on the client to send the recorded frames to the server.
+    /// İstemcideki GhostRecorder tarafından kaydedilen veri sunucuya gönderilir, sunucu burada Ghost oluşturur.
+    /// </summary>
+    [ServerRpc(RequireOwnership = false)]
+    public void SpawnGhostFromServerRpc(GhostFrameData[] frames, ulong ownerClientId, int weaponIndex)
+    {
+        if (!IsServer) return;
+        
+        WeaponData weaponData = null;
+        if (weaponIndex >= 0 && weaponIndex < _availableWeapons.Length)
+        {
+            weaponData = _availableWeapons[weaponIndex];
+        }
+
+        Debug.Log($"[GameManager] Player {ownerClientId} died. Received recorded frames: {frames.Length}");
+
+        if (frames.Length > 0)
+        {
+            SpawnGhost(frames, ownerClientId, weaponData);
+        }
+    }
+
+    /// <summary>
+    /// Spawns a ghost with the recorded frame data.
+    /// Kaydedilmiş kare verileriyle bir hayalet oluşturur.
+    /// </summary>
+    private void SpawnGhost(GhostFrameData[] frames, ulong ownerClientId, WeaponData weaponData)
+    {
+        if (_ghostPrefab == null || frames == null || frames.Length == 0) return;
+
+        // Ghost'un başlatılacağı (ve döneceği) spawn noktasını belirle
+        Transform teamSpawnPoint = (ownerClientId == NetworkManager.ServerClientId) ? _spawnPointLeft : _spawnPointRight;
+        if (teamSpawnPoint == null) return;
+
+        Vector3 spawnPos = teamSpawnPoint.position;
+        GameObject ghostObj = Instantiate(_ghostPrefab, spawnPos, Quaternion.identity);
+
+        NetworkObject netObj = ghostObj.GetComponent<NetworkObject>();
+        if (netObj == null)
+        {
+            Debug.LogError("Ghost prefab'ında NetworkObject bulunamadı!");
+            Destroy(ghostObj);
+            return;
+        }
+        netObj.Spawn();
+
+        _activeGhosts.Add(ghostObj);
+        Debug.Log($"[GameManager] SpawnGhost executed! Total active ghosts: {_activeGhosts.Count}");
+
+        GhostPlayback playback = ghostObj.GetComponent<GhostPlayback>();
+        if (playback != null)
+        {
+            playback.Initialize(frames, weaponData, ownerClientId, spawnPos);
+        }
+
+        _activeGhosts.Add(ghostObj);
+    }
+
+    /// <summary>
+    /// Respawns the player at their team's spawn point.
+    /// Oyuncuyu takımının doğuş noktasında yeniden doğurur.
+    /// </summary>
+    private void RespawnPlayer(ulong clientId, NetworkObject playerNetObj)
+    {
+        if (playerNetObj == null) return;
+
+        // Host (clientId 0) sol tarafta, Client sağ tarafta doğar
+        Transform spawnPoint = (clientId == NetworkManager.ServerClientId) ? _spawnPointLeft : _spawnPointRight;
+        if (spawnPoint == null)
+        {
+            Debug.LogWarning($"Spawn point for client {clientId} not assigned!");
+            return;
+        }
+
+        playerNetObj.transform.position = spawnPoint.position;
+
+        // ClientNetworkTransform owner-authoritative olduğu için client'a da bildir
+        TeleportPlayerClientRpc(spawnPoint.position, new ClientRpcParams
+        {
+            Send = new ClientRpcSendParams
+            {
+                TargetClientIds = new[] { clientId }
+            }
+        });
+
+        // Sağlığı sıfırla
+        HealthSystem health = playerNetObj.GetComponent<HealthSystem>();
+        if (health != null)
+        {
+            health.ResetHealth();
+        }
+
+        // Yeni hayalet kaydını başlat (Sahibi olan Client üzerinde)
+        GhostRecorder recorder = playerNetObj.GetComponent<GhostRecorder>();
+        if (recorder != null)
+        {
+            recorder.StartNewRecordingClientRpc();
+        }
+    }
+
+    /// <summary>
+    /// Rewards the killer with coins.
+    /// Öldüren oyuncuya coin ödülü verir.
+    /// </summary>
+    private void RewardKiller(ulong killerClientId)
+    {
+        if (!NetworkManager.Singleton.ConnectedClients.ContainsKey(killerClientId)) return;
+
+        NetworkObject killerObj = NetworkManager.Singleton.ConnectedClients[killerClientId].PlayerObject;
+        if (killerObj == null) return;
+
+        CoinManager coinManager = killerObj.GetComponent<CoinManager>();
+        if (coinManager != null)
+        {
+            coinManager.AddCoins(_killReward);
+        }
+    }
+
+    /// <summary>
+    /// Handles weapon purchase request from a player.
+    /// Oyuncudan gelen silah satın alma isteğini işler.
+    /// </summary>
+    public void HandleWeaponPurchase(ulong clientId, int weaponIndex)
+    {
+        if (!IsServer) return;
+        if (_availableWeapons == null || weaponIndex < 0 || weaponIndex >= _availableWeapons.Length) return;
+
+        WeaponData weapon = _availableWeapons[weaponIndex];
+        if (weapon == null) return;
+
+        if (!NetworkManager.Singleton.ConnectedClients.ContainsKey(clientId)) return;
+
+        NetworkObject playerObj = NetworkManager.Singleton.ConnectedClients[clientId].PlayerObject;
+        if (playerObj == null) return;
+
+        CoinManager coinManager = playerObj.GetComponent<CoinManager>();
+        WeaponController weaponCtrl = playerObj.GetComponent<WeaponController>();
+
+        if (coinManager == null || weaponCtrl == null) return;
+
+        if (weapon.cost == 0 || coinManager.SpendCoins(weapon.cost))
+        {
+            weaponCtrl.SetWeapon(weapon);
+            Debug.Log($"Player {clientId} purchased {weapon.weaponName}!");
+
+            // Satın alma başarılı, şimdi respawn et
+            RespawnPlayer(clientId, playerObj);
+
+            // Oyuncuyu tekrar aktif et
+            ShowPlayerClientRpc(new ClientRpcParams
+            {
+                Send = new ClientRpcSendParams
+                {
+                    TargetClientIds = new[] { clientId }
+                }
+            });
+        }
+        else
+        {
+            Debug.Log($"Player {clientId} can't afford {weapon.weaponName}!");
+        }
+    }
+
+    [ClientRpc]
+    private void ShowDeathShopClientRpc(ClientRpcParams rpcParams = default)
+    {
+        DeathShopUI shopUI = FindFirstObjectByType<DeathShopUI>();
+        if (shopUI != null)
+        {
+            shopUI.ShowShop();
+        }
+    }
+
+    [ClientRpc]
+    private void HidePlayerClientRpc(ClientRpcParams rpcParams = default)
+    {
+        // Ölen oyuncunun karakterini gizle (shop seçene kadar)
+        var localPlayer = NetworkManager.Singleton.LocalClient?.PlayerObject;
+        if (localPlayer != null)
+        {
+            localPlayer.gameObject.SetActive(false);
+        }
+    }
+
+    /// <summary>
+    /// Called by DeathShopUI after weapon selection to respawn.
+    /// DeathShopUI silah seçimi sonrası oyuncuyu yeniden doğurmak için çağırır.
+    /// </summary>
+    [ServerRpc(RequireOwnership = false)]
+    public void RequestRespawnServerRpc(ServerRpcParams rpcParams = default)
+    {
+        ulong clientId = rpcParams.Receive.SenderClientId;
+        if (!NetworkManager.Singleton.ConnectedClients.ContainsKey(clientId)) return;
+
+        NetworkObject playerNetObj = NetworkManager.Singleton.ConnectedClients[clientId].PlayerObject;
+        if (playerNetObj == null) return;
+
+        RespawnPlayer(clientId, playerNetObj);
+
+        // Oyuncuyu tekrar aktif et
+        ShowPlayerClientRpc(new ClientRpcParams
+        {
+            Send = new ClientRpcSendParams
+            {
+                TargetClientIds = new[] { clientId }
+            }
+        });
+    }
+
+    [ClientRpc]
+    private void ShowPlayerClientRpc(ClientRpcParams rpcParams = default)
+    {
+        var localPlayer = NetworkManager.Singleton.LocalClient?.PlayerObject;
+        if (localPlayer != null)
+        {
+            localPlayer.gameObject.SetActive(true);
+        }
+    }
+
+    /// <summary>
+    /// Called when a base is destroyed. Ends the game.
+    /// Base yıkıldığında çağrılır. Oyunu bitirir.
+    /// </summary>
+    public void OnBaseDestroyed(int winnerTeam)
+    {
+        if (!IsServer) return;
+
+        Debug.Log($"GAME OVER! Winner: Team {winnerTeam}");
+        AnnounceWinnerClientRpc(winnerTeam);
+    }
+
+    [ClientRpc]
+    private void AnnounceWinnerClientRpc(int winnerTeam)
+    {
+        Debug.Log($"Team {winnerTeam} WINS!");
+        // TODO: Oyun sonu ekranı göster
+    }
+}
