@@ -62,15 +62,16 @@ public class BattleHUD : MonoBehaviour
         }
     }
 
+    private bool _coinBound;
+
     private void Update()
     {
-        // CoinManager geç spawn olabilir, henüz bağlanmadıysa bağlan
-        if (_coinText != null && CoinManager.LocalInstance != null)
+        // CoinManager geç spawn olabilir, henüz bağlanmadıysa bağlan (sadece bir kez)
+        if (!_coinBound && _coinText != null && CoinManager.LocalInstance != null)
         {
-            // İlk bağlantıyı kontrol et
-            CoinManager.LocalInstance.OnCoinsChanged -= OnCoinsChanged; // Çift kayıt engelle
             CoinManager.LocalInstance.OnCoinsChanged += OnCoinsChanged;
             UpdateCoinText(CoinManager.LocalInstance.Coins);
+            _coinBound = true;
         }
     }
 

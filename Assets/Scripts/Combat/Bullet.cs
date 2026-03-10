@@ -41,7 +41,9 @@ public class Bullet : NetworkBehaviour
         // Mermi görsellerini client'larda ayarla:
         // - Ateş eden oyuncu: GİZLE (yerel tahmin mermisi zaten var)
         // - Diğer oyuncular: Rengi ayarla
-        SetBulletVisualsClientRpc(shooterClientId, bulletColor.r, bulletColor.g, bulletColor.b);
+        // Ghost mermileri için: Hiçbir client'ta gizleme (yerel tahmin mermisi yok)
+        ulong visualOwnerId = isGhostBullet ? ulong.MaxValue : shooterClientId;
+        SetBulletVisualsClientRpc(visualOwnerId, bulletColor.r, bulletColor.g, bulletColor.b);
 
         // Merminin fiziksel olarak çarpmaması, sadece içinden geçip (trigger) "OnTriggerEnter2D" çağırması için
         Collider2D col = GetComponent<Collider2D>();

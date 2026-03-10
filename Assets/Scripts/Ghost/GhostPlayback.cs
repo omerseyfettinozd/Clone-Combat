@@ -15,7 +15,7 @@ public class GhostPlayback : NetworkBehaviour
 
     [Header("Physics & Movement / Fizik & Hareket")]
     [SerializeField] private float _moveSpeed = 7f;
-    [SerializeField] private float _jumpForce = 12f;
+    [SerializeField] private float _jumpForce = 7f;
     [SerializeField] private Transform _groundCheck;
     [SerializeField] private float _groundCheckRadius = 0.2f;
     [SerializeField] private LayerMask _groundLayer;
@@ -26,6 +26,7 @@ public class GhostPlayback : NetworkBehaviour
     private Rigidbody2D _rb;
     private bool _isGrounded;
     private Vector3 _spawnPosition;
+    private int _collisionCheckCounter;
 
     /// <summary>
     /// The original player's client ID who created this ghost.
@@ -58,7 +59,8 @@ public class GhostPlayback : NetworkBehaviour
         transform.position = spawnPosition;
 
         // Collider ve Rigidbody ayarlarını tüm clientlarda aynı olması için RPC ile gönder
-        SetupPhysicsClientRpc();
+        // OriginalOwnerId sadece server'da set ediliyor, client'a da gönder
+        SetupPhysicsClientRpc(originalOwnerId);
 
         // Eğer NetworkTransform varsa ve ilk pozisyon atamasıysa Teleport yap
         Unity.Netcode.Components.NetworkTransform nt = GetComponent<Unity.Netcode.Components.NetworkTransform>();
@@ -69,8 +71,10 @@ public class GhostPlayback : NetworkBehaviour
     }
 
     [ClientRpc]
-    private void SetupPhysicsClientRpc()
+    private void SetupPhysicsClientRpc(ulong originalOwnerId)
     {
+        // Client tarafında da OriginalOwnerId'yi ayarla (takım rengi belirleme için gerekli)
+        OriginalOwnerId = originalOwnerId;
         Collider2D[] myCols = GetComponentsInChildren<Collider2D>();
 
         // Player'lar ile fiziksel itişmeyi/çarpışmayı engellemek için IgnoreCollision kullanıyoruz (Zeminle çarpışması lazım!)
@@ -113,18 +117,20 @@ public class GhostPlayback : NetworkBehaviour
             rb.interpolation = RigidbodyInterpolation2D.Interpolate;
         }
 
-        // --- YENİ EKLENEN KISIM: Ghost'lar arka planda kalsın ---
+        // --- Ghost'lar arka planda kalsın + Takım rengi ---
+        Color teamColor = Color.white;
+        if (GameManager.Instance != null)
+        {
+            teamColor = GameManager.Instance.GetTeamColor(OriginalOwnerId);
+        }
+
         SpriteRenderer[] srs = GetComponentsInChildren<SpriteRenderer>(true);
         foreach (var sr in srs)
         {
             sr.sortingOrder = 5; // Oyuncudan (10) daha düşük bir değere çekiyoruz.
-            // Hayaletleri biraz daha şeffaf yapalım, görsel olarak belli olsun
-            Color c = sr.color;
-            if (c.a >= 0.9f)
-            {
-                c.a = 0.5f;
-                sr.color = c;
-            }
+            // Takım rengi + yarı şeffaf (ghost olduğu belli olsun)
+            teamColor.a = 0.5f;
+            sr.color = teamColor;
         }
     }
 
@@ -168,6 +174,10 @@ public class GhostPlayback : NetworkBehaviour
         {
             _isGrounded = Physics2D.OverlapCircle(_groundCheck.position, _groundCheckRadius, _groundLayer);
         }
+        else
+        {
+            Debug.LogWarning("[GhostPlayback] _groundCheck atanmamış! Ghost zıplayamaz. Prefab'ı kontrol edin.", this);
+        }
     }
 
     private void FixedUpdate()
@@ -175,7 +185,14 @@ public class GhostPlayback : NetworkBehaviour
         if (!IsServer || !_isPlaying || _frames == null) return;
 
         CheckGround();
-        IgnoreCollisionsContinuously();
+
+        // Performans: Her frame FindObjectsByType yerine, ~1 saniyede bir çalıştır
+        _collisionCheckCounter++;
+        if (_collisionCheckCounter >= 60)
+        {
+            _collisionCheckCounter = 0;
+            IgnoreCollisionsContinuously();
+        }
 
         // Oynatma bittiğinde başa sar (sürekli tekrar etsin)
         if (_currentFrameIndex >= _frames.Length)

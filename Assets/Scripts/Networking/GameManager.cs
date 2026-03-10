@@ -30,6 +30,10 @@ public class GameManager : NetworkBehaviour
     [Header("Economy / Ekonomi")]
     [SerializeField] private int _killReward = 25; // Öldürme başına coin ödülü
 
+    [Header("Team Colors / Takım Renkleri")]
+    [SerializeField] private Color _teamColorLeft = new Color(0.2f, 0.5f, 1f);  // Mavi (Team 0 - Host)
+    [SerializeField] private Color _teamColorRight = new Color(1f, 0.3f, 0.3f); // Kırmızı (Team 1 - Client)
+
     // Tüm aktif hayaletlerin listesi
     private List<GameObject> _activeGhosts = new List<GameObject>();
 
@@ -85,7 +89,38 @@ public class GameManager : NetworkBehaviour
                     TargetClientIds = new[] { clientId }
                 }
             });
+
+            // Takım rengini tüm client'larda ayarla
+            Color teamColor = (clientId == NetworkManager.ServerClientId) ? _teamColorLeft : _teamColorRight;
+            SetTeamColorClientRpc(playerObj, teamColor.r, teamColor.g, teamColor.b);
         }
+    }
+
+    /// <summary>
+    /// Sets the team color on all clients for a player.
+    /// Bir oyuncunun takım rengini tüm client'larda ayarlar.
+    /// </summary>
+    [ClientRpc]
+    private void SetTeamColorClientRpc(NetworkObjectReference playerRef, float r, float g, float b)
+    {
+        if (playerRef.TryGet(out NetworkObject playerObj))
+        {
+            Color teamColor = new Color(r, g, b);
+            SpriteRenderer[] srs = playerObj.GetComponentsInChildren<SpriteRenderer>(true);
+            foreach (var sr in srs)
+            {
+                sr.color = teamColor;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Returns the team color for the given client.
+    /// Verilen client için takım rengini döndürür.
+    /// </summary>
+    public Color GetTeamColor(ulong clientId)
+    {
+        return (clientId == NetworkManager.ServerClientId) ? _teamColorLeft : _teamColorRight;
     }
 
     [ClientRpc]
@@ -219,8 +254,6 @@ public class GameManager : NetworkBehaviour
         {
             playback.Initialize(frames, weaponData, ownerClientId, spawnPos);
         }
-
-        _activeGhosts.Add(ghostObj);
     }
 
     /// <summary>
@@ -249,6 +282,10 @@ public class GameManager : NetworkBehaviour
                 TargetClientIds = new[] { clientId }
             }
         });
+
+        // Takım rengini yeniden uygula (respawn sonrası renk kaybolmamasını sağla)
+        Color teamColor = GetTeamColor(clientId);
+        SetTeamColorClientRpc(playerNetObj, teamColor.r, teamColor.g, teamColor.b);
 
         // Sağlığı sıfırla
         HealthSystem health = playerNetObj.GetComponent<HealthSystem>();
@@ -308,6 +345,16 @@ public class GameManager : NetworkBehaviour
         if (weapon.cost == 0 || coinManager.SpendCoins(weapon.cost))
         {
             weaponCtrl.SetWeapon(weapon);
+            
+            // Client tarafında da silahı güncelle (host için zaten aynı makinede)
+            weaponCtrl.SetWeaponClientRpc(weaponIndex, new ClientRpcParams
+            {
+                Send = new ClientRpcSendParams
+                {
+                    TargetClientIds = new[] { clientId }
+                }
+            });
+            
             Debug.Log($"Player {clientId} purchased {weapon.weaponName}!");
 
             // Satın alma başarılı, şimdi respawn et
@@ -315,6 +362,15 @@ public class GameManager : NetworkBehaviour
 
             // Oyuncuyu tekrar aktif et
             ShowPlayerClientRpc(new ClientRpcParams
+            {
+                Send = new ClientRpcSendParams
+                {
+                    TargetClientIds = new[] { clientId }
+                }
+            });
+
+            // Ölüm mağazasını kapat (satın alma başarılı oldu)
+            HideDeathShopClientRpc(new ClientRpcParams
             {
                 Send = new ClientRpcSendParams
                 {
@@ -381,6 +437,16 @@ public class GameManager : NetworkBehaviour
         if (localPlayer != null)
         {
             localPlayer.gameObject.SetActive(true);
+        }
+    }
+
+    [ClientRpc]
+    private void HideDeathShopClientRpc(ClientRpcParams rpcParams = default)
+    {
+        DeathShopUI shopUI = FindFirstObjectByType<DeathShopUI>();
+        if (shopUI != null)
+        {
+            shopUI.HideShop();
         }
     }
 

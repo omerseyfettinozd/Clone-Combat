@@ -10,7 +10,7 @@ public class PlayerController : NetworkBehaviour
 {
     [Header("Movement / Hareket")]
     [SerializeField] private float _moveSpeed = 7f;
-    [SerializeField] private float _jumpForce = 12f;
+    [SerializeField] private float _jumpForce = 7f;
 
     [Header("Ground Check / Zemin Kontrolü")]
     [SerializeField] private Transform _groundCheck;      // Ayakların altındaki kontrol noktası
@@ -30,6 +30,7 @@ public class PlayerController : NetworkBehaviour
     private float _lastSyncedAngle;
     private Vector3 _cachedMouseWorldPos; // Duplicate hesaplamayı önlemek için cache
     private bool _hasJumpedThisFrame; // Ghost Recorder için zıplama durumu
+    private int _collisionCheckCounter;
 
     private void Awake()
     {
@@ -40,6 +41,34 @@ public class PlayerController : NetworkBehaviour
     {
         base.OnNetworkSpawn();
         SetupPhysicsAndRendering();
+
+        // Kendi oyuncumuzu kamera ile takip et
+        if (IsOwner)
+        {
+            // Kamera sahneler arası geçişte kaybolabilir, bir sonraki frame'de de dene
+            AssignCameraTarget();
+        }
+    }
+
+    private void AssignCameraTarget()
+    {
+        if (CameraFollow.Instance != null)
+        {
+            CameraFollow.Instance.SetTarget(transform);
+        }
+        else
+        {
+            // CameraFollow henüz hazır değilse, kısa bir gecikmeyle tekrar dene
+            Invoke(nameof(RetryAssignCamera), 0.1f);
+        }
+    }
+
+    private void RetryAssignCamera()
+    {
+        if (CameraFollow.Instance != null && IsOwner)
+        {
+            CameraFollow.Instance.SetTarget(transform);
+        }
     }
 
     private void SetupPhysicsAndRendering()
@@ -49,6 +78,24 @@ public class PlayerController : NetworkBehaviour
         foreach (var sr in srs)
         {
             sr.sortingOrder = 10;
+        }
+
+        // 2. Rigidbody2D ayarları: Sahip olan fizik simülasyonu yapar, diğerleri NetworkTransform ile senkronize olur
+        if (_rb != null)
+        {
+            if (IsOwner)
+            {
+                // Owner: Fizik aktif, interpolation ile pürüzsüz hareket
+                _rb.bodyType = RigidbodyType2D.Dynamic;
+                _rb.interpolation = RigidbodyInterpolation2D.Interpolate;
+            }
+            else
+            {
+                // Non-owner: Fizik kapali — pozisyon NetworkTransform tarafından yönetilir
+                // Dynamic bırakılırsa yerçekimi NetworkTransform ile çatışır ve jitter oluşur
+                _rb.bodyType = RigidbodyType2D.Kinematic;
+                _rb.interpolation = RigidbodyInterpolation2D.Interpolate;
+            }
         }
 
         // 2. Çarpışmaları yoksay (Hayaletler ve diğer oyuncular)
@@ -108,7 +155,14 @@ public class PlayerController : NetworkBehaviour
 
         CheckGround();
         ApplyMovement();
-        IgnoreCollisionsContinuously();
+
+        // Performans: Her frame FindObjectsByType yerine, ~1 saniyede bir çalıştır
+        _collisionCheckCounter++;
+        if (_collisionCheckCounter >= 60)
+        {
+            _collisionCheckCounter = 0;
+            IgnoreCollisionsContinuously();
+        }
     }
 
     private void IgnoreCollisionsContinuously()
@@ -269,7 +323,9 @@ public class PlayerController : NetworkBehaviour
     public float GetAimAngle()
     {
         if (_weaponPivot == null) return 0f;
-        return _weaponPivot.rotation.eulerAngles.z;
+        // eulerAngles.z 0-360 aralığında döner, bunu -180/180 aralığına çevir
+        // Ghost playback'te yüz çevirme bu aralığı bekliyor
+        return Mathf.DeltaAngle(0f, _weaponPivot.rotation.eulerAngles.z);
     }
 
     /// <summary>

@@ -331,15 +331,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f366023d8173a3c41b1c4a2e370e65e0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerController
-  _moveSpeed: 5
-  _jumpForce: 12
+  _moveSpeed: 7
+  _jumpForce: 7
   _groundCheck: {fileID: 4326720999026004442}
   _groundCheckRadius: 0.2
   _groundLayer:
     serializedVersion: 2
     m_Bits: 64
   _weaponPivot: {fileID: 6091854059938728449}
-  _aimSyncThreshold: 1
+  _aimSyncThreshold: 0.5
 --- !u!114 &371708797374369747
 MonoBehaviour:
   m_ObjectHideFlags: 0

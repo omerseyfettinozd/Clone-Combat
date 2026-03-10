@@ -18,6 +18,7 @@ public class WeaponController : NetworkBehaviour
 
     private float _fireTimer;
     private bool _isShooting;
+    private bool _hasShotThisFrame; // Ghost Recorder için ateş durumu (ConsumeJumpFlag gibi)
 
     public WeaponData CurrentWeapon => _currentWeapon;
 
@@ -32,6 +33,7 @@ public class WeaponController : NetworkBehaviour
         if (mouse != null && mouse.leftButton.isPressed && _fireTimer <= 0f && _currentWeapon != null && _firePoint != null)
         {
             _isShooting = true;
+            _hasShotThisFrame = true; // Ghost recorder'ın yakalaması için işaretle
             _fireTimer = _currentWeapon.fireRate;
 
             // CLIENT PREDICTION: Yerel mermi hemen görünsün (0 gecikme)
@@ -149,11 +151,41 @@ public class WeaponController : NetworkBehaviour
     }
 
     /// <summary>
+    /// Sets the weapon on the owning client (called via ClientRpc from server).
+    /// Silahı sahip olan istemcide ayarlar (sunucudan ClientRpc ile çağrılır).
+    /// </summary>
+    [ClientRpc]
+    public void SetWeaponClientRpc(int weaponIndex, ClientRpcParams rpcParams = default)
+    {
+        if (GameManager.Instance == null) return;
+        var weapons = GameManager.Instance.AvailableWeapons;
+        if (weaponIndex >= 0 && weaponIndex < weapons.Length)
+        {
+            _currentWeapon = weapons[weaponIndex];
+            _fireTimer = 0f;
+            Debug.Log($"[WeaponController] Client weapon set to: {_currentWeapon.weaponName}");
+        }
+    }
+
+    /// <summary>
     /// Returns whether the player is currently shooting (used by Ghost recorder).
     /// Oyuncunun şu an ateş edip etmediğini döndürür (Hayalet kaydedici için).
     /// </summary>
     public bool IsShooting()
     {
         return _isShooting;
+    }
+
+    /// <summary>
+    /// GhostRecorder'ın bu frame içinde ateş yapılıp yapılmadığını okuyup sıfırlaması için kullanılır.
+    /// </summary>
+    public bool ConsumeShootFlag()
+    {
+        if (_hasShotThisFrame)
+        {
+            _hasShotThisFrame = false;
+            return true;
+        }
+        return false;
     }
 }

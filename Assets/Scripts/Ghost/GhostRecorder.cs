@@ -58,7 +58,7 @@ public class GhostRecorder : NetworkBehaviour
             MoveInputX = _playerController.GetMoveInput().x,
             JumpPressed = _playerController.ConsumeJumpFlag(), // Sadece basıldığı kare true döner
             AimAngle = _playerController.GetAimAngle(),
-            IsShooting = _weaponController.IsShooting()
+            IsShooting = _weaponController.ConsumeShootFlag() // Sadece ateş edildiği kare true döner
         };
 
         _recordedFrames.Add(frame);
@@ -85,11 +85,13 @@ public class GhostRecorder : NetworkBehaviour
         // Kaydı durdur
         _isRecording = false;
 
-        // Silah indeksini bul
+        // Silah indeksini bul (önce referans, sonra isim ile eşleştir)
         int weaponIndex = -1;
         if (_weaponController != null && _weaponController.CurrentWeapon != null && GameManager.Instance != null)
         {
             var weapons = GameManager.Instance.AvailableWeapons;
+            
+            // 1. Önce referans karşılaştırması dene
             for (int i = 0; i < weapons.Length; i++)
             {
                 if (weapons[i] == _weaponController.CurrentWeapon)
@@ -97,6 +99,28 @@ public class GhostRecorder : NetworkBehaviour
                     weaponIndex = i;
                     break;
                 }
+            }
+            
+            // 2. Referans bulunamazsa isim ile eşleştir (fallback)
+            if (weaponIndex == -1)
+            {
+                string currentName = _weaponController.CurrentWeapon.weaponName;
+                for (int i = 0; i < weapons.Length; i++)
+                {
+                    if (weapons[i] != null && weapons[i].weaponName == currentName)
+                    {
+                        weaponIndex = i;
+                        Debug.Log($"[GhostRecorder] Weapon matched by name: {currentName} (index {i})");
+                        break;
+                    }
+                }
+            }
+            
+            // 3. Hâlâ bulunamazsa varsayılan olarak ilk silahı (Pistol) kullan
+            if (weaponIndex == -1)
+            {
+                weaponIndex = 0;
+                Debug.LogWarning($"[GhostRecorder] Could not find weapon '{_weaponController.CurrentWeapon.weaponName}' in AvailableWeapons! Defaulting to index 0.");
             }
         }
 

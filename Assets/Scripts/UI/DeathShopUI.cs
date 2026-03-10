@@ -95,11 +95,10 @@ public class DeathShopUI : MonoBehaviour
             CoinManager.LocalInstance.RequestPurchaseServerRpc(weaponIndex);
         }
 
-        // NOT: Respawn artık GameManager.HandleWeaponPurchase içinde,
-        // satın alma başarılı olduktan SONRA otomatik tetiklenir.
-        // Böylece silah değişmeden respawn olma sorunu çözülmüş olur.
-
-        HideShop();
+        // NOT: HideShop artık burada çağrılmıyor!
+        // Satın alma başarısız olursa shop açık kalmalı ki oyuncu başka silah seçebilsin.
+        // Shop, GameManager.HandleWeaponPurchase başarılı olduktan sonra
+        // ShowPlayerClientRpc ile birlikte kapatılacak.
     }
 
     public void HideShop()

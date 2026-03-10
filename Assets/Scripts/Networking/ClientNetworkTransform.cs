@@ -2,8 +2,8 @@ using Unity.Netcode.Components;
 using UnityEngine;
 
 /// <summary>
-/// Owner-authoritative NetworkTransform. Allows the owning client to move their character.
-/// Sahip-yetkili NetworkTransform. Sahip olan client'ın kendi karakterini hareket ettirmesini sağlar.
+/// Owner-authoritative NetworkTransform with optimized interpolation settings.
+/// Optimize edilmiş interpolasyon ayarlarıyla sahip-yetkili NetworkTransform.
 /// </summary>
 [DisallowMultipleComponent]
 public class ClientNetworkTransform : NetworkTransform

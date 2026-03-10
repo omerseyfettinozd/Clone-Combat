@@ -318,6 +318,8 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 2144c1514b784974f999942e15653611, type: 2}
   - {fileID: 11400000, guid: 2773cabec4f0dc14583662191082227d, type: 2}
   _killReward: 25
+  _teamColorLeft: {r: 0.2, g: 0.5, b: 1, a: 1}
+  _teamColorRight: {r: 1, g: 0.3, b: 0.3, a: 1}
 --- !u!4 &116468214
 Transform:
   m_ObjectHideFlags: 0
@@ -1063,6 +1065,7 @@ GameObject:
   - component: {fileID: 567928629}
   - component: {fileID: 567928628}
   - component: {fileID: 567928631}
+  - component: {fileID: 567928632}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -1188,6 +1191,22 @@ MonoBehaviour:
     m_VarianceClampScale: 0.9
     m_ContrastAdaptiveSharpening: 0
   m_Version: 2
+--- !u!114 &567928632
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 567928627}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 436c1fa836b29244f8a70dcc1fd16475, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CameraFollow
+  _smoothSpeed: 8
+  _offset: {x: 0, y: 1, z: -10}
+  _deadZoneX: 0.5
+  _deadZoneY: 0.3
 --- !u!1 &568290689
 GameObject:
   m_ObjectHideFlags: 0
