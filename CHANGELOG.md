@@ -4,6 +4,29 @@ Tüm önemli değişiklikler bu dosyada belgelenir.
 
 ---
 
+## [v0.2.0] — 2026-03-11
+
+### 🆕 Eklenen
+- **Hit Marker Efekti**: Mermi oyuncuya isabet ettiğinde tüm client'larda beyaz parlama efekti
+- **NetworkRigidbody2D Desteği**: Player ve Ghost prefab'larına eklendi (daha iyi fizik senkronizasyonu)
+- `Assets/Scripts/Combat/HitEffect.cs` — İsabet görsel efekti
+
+### 🐛 Düzeltilen
+- **Mermiler Ghost'lara Çarpıyordu**: Sadece kendi ghost'u atlanıyordu → tüm ghost'lardan geçiyor
+- **Mermiler Player'ları İtiyordu**: Spawn anında collider trigger değildi → Awake'te trigger yapıldı
+- **Ölüm Görünürlüğü**: Öldürülen tarafta ölü beden görünmüyordu, öldüren tarafta kalıyordu → tüm client'larda gizleniyor
+- **Kamera Ölümde Düşüyordu**: Rigidbody Dynamic kalıyordu → ölümde Kinematic, respawn'da Dynamic
+- **Ghost Silahları Dönmüyordu**: Nişan açısı sadece server'da uygulanıyordu → NetworkVariable ile tüm client'lara senkronize
+- **Kamera BattleArena'da Çalışmıyordu**: OnNetworkSpawn sahne değişiminde tekrar çağrılmıyordu → CameraFollow kendi local player'ını buluyor
+- **Ghost Takım Renkleri Client'ta Yanlıştı**: OriginalOwnerId client'a senkronize olmuyordu → SetupPhysicsClientRpc ile gönderiliyor
+
+### ⚡ İyileştirilen
+- **Tick Rate**: 60Hz → 128Hz (CS:GO competitive seviyesi)
+- **ClientNetworkTransform**: Position threshold düşürüldü, interpolation aktif
+- **Kamera Sistemi**: Lerp → SmoothDamp, LateUpdate → FixedUpdate, lookahead eklendi
+
+---
+
 ## [v0.1.0] — 2026-03-10
 
 ### 🆕 Eklenen

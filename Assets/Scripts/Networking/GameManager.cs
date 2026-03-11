@@ -180,16 +180,10 @@ public class GameManager : NetworkBehaviour
             recorder.RequestFramesAndSpawnGhostClientRpc();
         }
 
-        // Oyuncuyu gizle (ölü durumda beklet - shop seçimi yapana kadar)
-        HidePlayerClientRpc(new ClientRpcParams
-        {
-            Send = new ClientRpcSendParams
-            {
-                TargetClientIds = new[] { deadPlayerId }
-            }
-        });
+        // Oyuncuyu TÜM client'larda gizle (öldüren taraf da görsün ki öldü)
+        HidePlayerClientRpc(deadPlayerNetObj);
 
-        // Ölüm mağazasını göster (client tarafında)
+        // Ölüm mağazasını göster (sadece ölen oyuncuya)
         ShowDeathShopClientRpc(new ClientRpcParams
         {
             Send = new ClientRpcSendParams
@@ -360,14 +354,8 @@ public class GameManager : NetworkBehaviour
             // Satın alma başarılı, şimdi respawn et
             RespawnPlayer(clientId, playerObj);
 
-            // Oyuncuyu tekrar aktif et
-            ShowPlayerClientRpc(new ClientRpcParams
-            {
-                Send = new ClientRpcSendParams
-                {
-                    TargetClientIds = new[] { clientId }
-                }
-            });
+            // Oyuncuyu tüm client'larda tekrar görünür yap
+            ShowPlayerClientRpc(playerObj);
 
             // Ölüm mağazasını kapat (satın alma başarılı oldu)
             HideDeathShopClientRpc(new ClientRpcParams
@@ -395,13 +383,32 @@ public class GameManager : NetworkBehaviour
     }
 
     [ClientRpc]
-    private void HidePlayerClientRpc(ClientRpcParams rpcParams = default)
+    private void HidePlayerClientRpc(NetworkObjectReference playerRef)
     {
-        // Ölen oyuncunun karakterini gizle (shop seçene kadar)
-        var localPlayer = NetworkManager.Singleton.LocalClient?.PlayerObject;
-        if (localPlayer != null)
+        // Ölen oyuncunun karakterini TÜM client'larda gizle
+        if (playerRef.TryGet(out NetworkObject playerObj))
         {
-            localPlayer.gameObject.SetActive(false);
+            // Sprite'ları gizle
+            SpriteRenderer[] srs = playerObj.GetComponentsInChildren<SpriteRenderer>(true);
+            foreach (var sr in srs)
+            {
+                sr.enabled = false;
+            }
+
+            // Collider'ları kapat
+            Collider2D[] cols = playerObj.GetComponentsInChildren<Collider2D>(true);
+            foreach (var col in cols)
+            {
+                col.enabled = false;
+            }
+
+            // Rigidbody'yi dondur (yerçekimiyle düşmesin, kamera takip etmesin)
+            Rigidbody2D rb = playerObj.GetComponent<Rigidbody2D>();
+            if (rb != null)
+            {
+                rb.linearVelocity = Vector2.zero;
+                rb.bodyType = RigidbodyType2D.Kinematic;
+            }
         }
     }
 
@@ -420,23 +427,36 @@ public class GameManager : NetworkBehaviour
 
         RespawnPlayer(clientId, playerNetObj);
 
-        // Oyuncuyu tekrar aktif et
-        ShowPlayerClientRpc(new ClientRpcParams
-        {
-            Send = new ClientRpcSendParams
-            {
-                TargetClientIds = new[] { clientId }
-            }
-        });
+        // Oyuncuyu tüm client'larda tekrar görünür yap
+        ShowPlayerClientRpc(playerNetObj);
     }
 
     [ClientRpc]
-    private void ShowPlayerClientRpc(ClientRpcParams rpcParams = default)
+    private void ShowPlayerClientRpc(NetworkObjectReference playerRef)
     {
-        var localPlayer = NetworkManager.Singleton.LocalClient?.PlayerObject;
-        if (localPlayer != null)
+        // Respawn olan oyuncunun görsellerini TÜM client'larda aç
+        if (playerRef.TryGet(out NetworkObject playerObj))
         {
-            localPlayer.gameObject.SetActive(true);
+            SpriteRenderer[] srs = playerObj.GetComponentsInChildren<SpriteRenderer>(true);
+            foreach (var sr in srs)
+            {
+                sr.enabled = true;
+            }
+
+            Collider2D[] cols = playerObj.GetComponentsInChildren<Collider2D>(true);
+            foreach (var col in cols)
+            {
+                col.enabled = true;
+            }
+
+            // Rigidbody'yi geri aç (owner için Dynamic, diğerleri için Kinematic)
+            Rigidbody2D rb = playerObj.GetComponent<Rigidbody2D>();
+            if (rb != null)
+            {
+                bool isLocalPlayer = playerObj.IsOwner;
+                rb.bodyType = isLocalPlayer ? RigidbodyType2D.Dynamic : RigidbodyType2D.Kinematic;
+                rb.linearVelocity = Vector2.zero;
+            }
         }
     }
 

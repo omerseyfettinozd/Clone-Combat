@@ -28,6 +28,11 @@ public class GhostPlayback : NetworkBehaviour
     private Vector3 _spawnPosition;
     private int _collisionCheckCounter;
 
+    // Silah açısını tüm client'lara senkronize et
+    private NetworkVariable<float> _syncedAimAngle = new NetworkVariable<float>(
+        0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server
+    );
+
     /// <summary>
     /// The original player's client ID who created this ghost.
     /// Bu hayaleti oluşturan orijinal oyuncunun client ID'si.
@@ -168,6 +173,18 @@ public class GhostPlayback : NetworkBehaviour
         }
     }
 
+    /// <summary>
+    /// Applies the synced aim angle to the weapon pivot on ALL clients.
+    /// Senkronize edilen nişan açısını TÜM client'larda silah pivot'una uygular.
+    /// </summary>
+    private void LateUpdate()
+    {
+        if (_weaponPivot == null) return;
+
+        // NetworkVariable tüm client'larda güncellenir — silah rotasyonu her yerde görünür
+        _weaponPivot.rotation = Quaternion.Euler(0f, 0f, _syncedAimAngle.Value);
+    }
+
     private void CheckGround()
     {
         if (_groundCheck != null)
@@ -237,11 +254,8 @@ public class GhostPlayback : NetworkBehaviour
         else
             transform.localScale = new Vector3(1f, 1f, 1f);
 
-        // 3. Nişan Alma
-        if (_weaponPivot != null)
-        {
-            _weaponPivot.rotation = Quaternion.Euler(0f, 0f, frame.AimAngle);
-        }
+        // 3. Nişan Alma (server'da ayarla, NetworkVariable ile client'lara senkronize olur)
+        _syncedAimAngle.Value = frame.AimAngle;
 
         if (frame.IsShooting && _firePoint != null && _bulletPrefab != null && _weaponData != null)
         {

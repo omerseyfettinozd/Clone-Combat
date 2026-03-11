@@ -9,7 +9,7 @@ using UnityEngine;
 public class NetworkOptimizer : MonoBehaviour
 {
     [Header("Tick Rate / Güncelleme Hızı")]
-    [SerializeField] private int _tickRate = 60; // CS:GO = 64/128, varsayılan Unity = 30
+    [SerializeField] private int _tickRate = 128; // CS:GO competitive = 128Hz
 
     private void Awake()
     {

@@ -18,6 +18,14 @@ public class Bullet : NetworkBehaviour
     private float _spawnGraceTimer; // Client'ın spawn mesajını alması için minimum bekleme
     private bool _isGhostBullet;
 
+    private void Awake()
+    {
+        // Mermi spawn olduğu anda collider'ı trigger yap
+        // Initialize() sunucuda çalışana kadar geçen sürede fiziksel çarpışma olmasın
+        Collider2D col = GetComponent<Collider2D>();
+        if (col != null) col.isTrigger = true;
+    }
+
     /// <summary>
     /// Called by WeaponController on the server after spawn.
     /// WeaponController tarafından sunucuda spawn sonrası çağrılır.
@@ -128,9 +136,9 @@ public class Bullet : NetworkBehaviour
         NetworkObject netObj = collision.GetComponentInParent<NetworkObject>();
         if (netObj != null && netObj.OwnerClientId == _shooterClientId) return;
 
-        // Kendi hayaletine çarpmasın (ghost'un orijinal sahibi == merminin sahibi ise geç)
+        // Ghost'lara çarpmasın — mermiler TÜM ghost'lardan geçmeli
         GhostPlayback ghost = collision.GetComponentInParent<GhostPlayback>();
-        if (ghost != null && ghost.OriginalOwnerId == _shooterClientId) return;
+        if (ghost != null) return;
 
         // Oyuncuya çarptıysa (Collider alt objede olabilir)
         HealthSystem health = collision.GetComponentInParent<HealthSystem>();
@@ -138,6 +146,11 @@ public class Bullet : NetworkBehaviour
         {
             Debug.Log($"[Bullet] Damaging player {health.OwnerClientId}! Damage: {_damage}");
             health.TakeDamage(_damage, _shooterClientId);
+            
+            // Hit marker efekti — tüm client'larda göster
+            Vector3 hitPos = collision.ClosestPoint(transform.position);
+            SpawnHitEffectClientRpc(hitPos.x, hitPos.y);
+            
             DespawnBullet();
             return;
         }
@@ -153,6 +166,48 @@ public class Bullet : NetworkBehaviour
         // Buraya kadar geldiyse duvar, zemin veya alakasız bir KATI objeye çarpmıştır.
         Debug.Log($"[Bullet] Hit environment/solid obstacle! Despawning. Hit object: {collision.gameObject.name}, Layer: {collision.gameObject.layer}");
         DespawnBullet();
+    }
+
+    [ClientRpc]
+    private void SpawnHitEffectClientRpc(float x, float y)
+    {
+        // Hit efekti: küçük bir parlama efekti oluştur
+        GameObject hitObj = new GameObject("HitEffect");
+        hitObj.transform.position = new Vector3(x, y, 0f);
+
+        SpriteRenderer sr = hitObj.AddComponent<SpriteRenderer>();
+        sr.sprite = CreateCircleSprite();
+        sr.sortingOrder = 20;
+
+        HitEffect effect = hitObj.AddComponent<HitEffect>();
+        effect.Initialize(Color.white);
+    }
+
+    private static Sprite _cachedCircleSprite;
+    private static Sprite CreateCircleSprite()
+    {
+        if (_cachedCircleSprite != null) return _cachedCircleSprite;
+
+        // Basit 16x16 beyaz daire sprite oluştur
+        int size = 16;
+        Texture2D tex = new Texture2D(size, size);
+        tex.filterMode = FilterMode.Bilinear;
+        Vector2 center = new Vector2(size / 2f, size / 2f);
+        float radius = size / 2f;
+
+        for (int x = 0; x < size; x++)
+        {
+            for (int y = 0; y < size; y++)
+            {
+                float dist = Vector2.Distance(new Vector2(x, y), center);
+                float alpha = dist < radius ? 1f - (dist / radius) : 0f;
+                tex.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+            }
+        }
+        tex.Apply();
+
+        _cachedCircleSprite = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 16f);
+        return _cachedCircleSprite;
     }
 
     private void DespawnBullet()

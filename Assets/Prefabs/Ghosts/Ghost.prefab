@@ -169,6 +169,7 @@ GameObject:
   - component: {fileID: 5807006889650373471}
   - component: {fileID: 4895604840060640006}
   - component: {fileID: 3029763649608679455}
+  - component: {fileID: 5052063362580617461}
   m_Layer: 0
   m_Name: Ghost
   m_TagString: Untagged
@@ -400,3 +401,15 @@ MonoBehaviour:
   _groundLayer:
     serializedVersion: 2
     m_Bits: 64
+--- !u!114 &5052063362580617461
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7402735503737618984}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 80d7c879794dfda4687da0e400131852, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Netcode.Components::Unity.Netcode.Components.NetworkRigidbody2D
