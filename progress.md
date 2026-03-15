@@ -31,11 +31,14 @@ Bu dosya **Clone Combat** projesindeki güncel ilerlememizi ve gelecekteki hedef
 - **FPS & Ping Ekranı**: Oyun içinde gecikmeyi ve FPS'i takip edebileceğimiz Debug HUD eklentisi.
 
 ### 🌍 Harita Tasarımı ve Dinamik Yapılar (v0.3.x - v0.4.x)
+- **Harita Tasarlama ve Etkileşim**: Oyun içi kazanılan altınlar (coinler) ile etkileşime girilebilen harita yapıları ve dinamik tasarımlar.
+- **Harita Seçim Ekranı**: Savaş arenası (Battle Arena) sahnesine geçmeden önce lobi içinde oylama yapılabilen harita seçme ekranı.
+- **Üs (Base) Geliştirmeleri**: Zamanla üslerin kendi canını yenilemesi ve bu can yenilenme hızının oyuncunun harcayacağı coinlerle artırılabilmesi.
 - **Yeni Haritalar ve Dinamik Platformlar**: Sadece bir Battle Arena yerine hareketli asansörler, yıkılabilir duvarlar ve zıplama yastıkları (jump pad) içeren genişletilmiş bölümler.
 - **Harita Sınırları (Confiner)**: Kameranın ve oyuncunun belirli bir sınırın dışına çıkmasını önleme.
-- **Harita Seçim Ekranı**: Lobi içinde oyuncuların harita oylaması yapabileceği veya rastgele seçebildiği sistemler (Harita havuzu).
 
 ### 🧑‍🚀 Karakterler ve Kozmetikler (v0.5.x)
+- **Takımlara Özel Karakterler**: Her iki takım (Mavi ve Kırmızı) için görsel ve yapısal olarak ayrı ayrı player prefab'larının hazırlanması.
 - **Farklı Karakter Sınıfları**: Zıplama gücü, hızı veya canı farklılık gösteren seçilebilir yeni karakter türleri.
 - **Karakter Yetenekleri**: Sadece silah değil, karaktere özgü pasif ya da aktif yeteneklerin eklenmesi.
 - **Animasyon ve Görsel Revizyon**: Yürüme, sekmeler ve vurulma anları için özel animasyon state'lerinin entegrasyonu; mermi izi ve çevre etkileşimi (VFX) iyileştirmeleri.
@@ -43,6 +46,10 @@ Bu dosya **Clone Combat** projesindeki güncel ilerlememizi ve gelecekteki hedef
 ### 🎮 Yeni Modlar: Splitscreen ve LAN (v0.6.x - v0.7.x)
 - **Yerel Çok Oyunculu (Splitscreen)**: Aynı ekranda, aynı bilgisayar üzerinde birden fazla kişiyle oynayabilme.
 - **Offline & LAN**: İnternet bağlantısı olmadan LAN (Yerel Ağ) üzerinden arkadaşlar arası sıfır gecikmeli sunucu kurma ve katılma özellikleri.
+
+### 📱 UI Geliştirmeleri ve Mobil Uyum (v0.6.x)
+- **Responsive UI**: Oyundaki arayüz tasarımlarının (Lobi, Mağaza, Oyun İçi HUD) farklı ekran çözünürlüklerine tam uyumlu ve esnek (responsive) hale getirilmesi.
+- **Mobil Ekran Desteği**: Oyunun mobil platformlarda da sorunsuz görüntülenebilecek seviyeye ulaştırılması.
 
 ### 🏆 Uzun Vadeli Büyük Hedefler
 - **Dereceli Eşleşme (Ranked)**: Beceri seviyesine (MMR) göre rakip bulma sistemi.
