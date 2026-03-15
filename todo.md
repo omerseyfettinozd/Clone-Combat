@@ -22,9 +22,16 @@ Bu dosya, projedeki ilerlemeyi takip edebilmek üzere düzenlenmiş, onay kutulu
 ## 🛠️ Orta Öncelikli
 - [ ] Ana üslerin (Base) canı zamanla kendiliğinden yenilenecek bir sistem eklenecek.
 - [ ] Üslerin can yenilenme hızı oyuncuların kazandığı coinler (altınlar) ile yükseltilebilecek (Hızlandırılabilecek).
+- [ ] **Üs Savunma (Turret)**: Kazanılan altınlarla üssü otomatik savunan nişancı kuleler (turret) eklenecek.
 - [ ] Sadece bir Battle Arena değil; hareketli platformlar, yıkılabilir duvarlar ve zıplama yastıkları (jump pad) içeren yeni harita tasarımları yapılacak.
+- [ ] **Tuzaklı Bölgeler**: Haritaya lav havuzları, düşen tavanlar veya ölümcül dikenler gibi aktifleşebilen tuzaklar eklenecek.
+- [ ] **Ghost Geçirmez Kalkanlar**: Sadece gerçek oyuncuların geçebildiği, hayaletleri dışarıda tutan taktiksel kalkanlar tasarlanacak.
 - [ ] Oyun içi puanlar ve altınlar ile doğrudan etkileşime girilebilen, dinamik harita tasarımları geliştirilecek.
 - [ ] Harita ve oyuncu sınırları (Confiner) belirlenecek, dışına çıkışlar engellenecek.
+
+## 👻 Ghost Etkileşimleri ve Savaş Mekanikleri
+- [ ] **Satın Alınabilir Hayaletler**: Oyuncuların mağazadan ekstra savaşçı hayalet (AI müttefik) satın alabilmesi sağlanacak.
+- [ ] **Rakip Hayaletlerini Yok Etme**: Düşman hayaletlerine doğrudan hasar verme ve onları haritadan silme mekanikleri oyuna dahil edilecek.
 
 ## 🏃‍♀️ Karakter Sınıfları ve Yetenekler
 - [ ] Zıplama gücü, karakter hızı veya maksimum can miktarı farklılık gösteren yeni karakter sınıfları oluşturulacak.
@@ -37,6 +44,7 @@ Bu dosya, projedeki ilerlemeyi takip edebilmek üzere düzenlenmiş, onay kutulu
 - [ ] FPS ve Ping verilerini anlık takip edeceğimiz bir **Debug HUD** (Ekran Görüntüsü) kurulacak.
 
 ## 🎮 Yeni Oyun Modları ve Uzun Vadeli Hedefler
+- [ ] **Farklı Oyun Modları**: Üs yıkmaya alternatif olarak "Kralı Koru" (VIP Modu) gibi heyecan verici ve farklı hedefleri olan yeni modlar eklenecek.
 - [ ] İnternetsiz veya düşük gecikmeli bağlantı için Offline/LAN (Local Area Network) kurulum yeteneği eklenecek.
 - [ ] Aynı bilgisayar ekranını ikiye bölerek oynamayı sağlayan "Splitscreen (Yerel Çok Oyunculu)" modu eklenecek.
 - [ ] Beceri seviyesine göre oyuncuların karşılaşabileceği "Dereceli Eşleşme (Ranked)" sistemi geliştirilecek.

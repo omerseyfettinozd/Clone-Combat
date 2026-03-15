@@ -34,8 +34,15 @@ Bu dosya **Clone Combat** projesindeki güncel ilerlememizi ve gelecekteki hedef
 - **Harita Tasarlama ve Etkileşim**: Oyun içi kazanılan altınlar (coinler) ile etkileşime girilebilen harita yapıları ve dinamik tasarımlar.
 - **Harita Seçim Ekranı**: Savaş arenası (Battle Arena) sahnesine geçmeden önce lobi içinde oylama yapılabilen harita seçme ekranı.
 - **Üs (Base) Geliştirmeleri**: Zamanla üslerin kendi canını yenilemesi ve bu can yenilenme hızının oyuncunun harcayacağı coinlerle artırılabilmesi.
+- **Üs Savunma Sistemleri (Turret)**: Kazanılan altınlarla üssü koruması için otomatik nişan alıp ateş eden savunma kuleleri (turret) inşa etme özelliği.
 - **Yeni Haritalar ve Dinamik Platformlar**: Sadece bir Battle Arena yerine hareketli asansörler, yıkılabilir duvarlar ve zıplama yastıkları (jump pad) içeren genişletilmiş bölümler.
+- **Tuzaklı Bölgeler**: Haritanın çeşitli yerlerinde aktifleşebilen ölümcül dikenler, lav havuzları veya düşen tavanlar gibi çevresel etkileşimli tuzaklar.
+- **Ghost Geçirmez Kalkanlar**: Sadece gerçek oyuncuların içerisinden geçebildiği, hayaletlerin çarpıp kaldığı taktiksel enerji duvarları.
 - **Harita Sınırları (Confiner)**: Kameranın ve oyuncunun belirli bir sınırın dışına çıkmasını önleme.
+
+### 👻 Ghost Etkileşimleri ve Savaş Mekanikleri (v0.4.x)
+- **Satın Alınabilir Hayaletler**: Oyuncuların mağazadan kendi ordularına katmak üzere fazladan yapay zeka (hayalet) satın alabilmesi.
+- **Rakip Hayaletlerini Yok Etme**: Düşman hayaletlerine hasar verip onları haritadan silmeye veya etkisiz hale getirmeye olanak sağlayan yeni savaş mekanikleri.
 
 ### 🧑‍🚀 Karakterler ve Kozmetikler (v0.5.x)
 - **Takımlara Özel Karakterler**: Her iki takım (Mavi ve Kırmızı) için görsel ve yapısal olarak ayrı ayrı player prefab'larının hazırlanması.
@@ -43,7 +50,8 @@ Bu dosya **Clone Combat** projesindeki güncel ilerlememizi ve gelecekteki hedef
 - **Karakter Yetenekleri**: Sadece silah değil, karaktere özgü pasif ya da aktif yeteneklerin eklenmesi.
 - **Animasyon ve Görsel Revizyon**: Yürüme, sekmeler ve vurulma anları için özel animasyon state'lerinin entegrasyonu; mermi izi ve çevre etkileşimi (VFX) iyileştirmeleri.
 
-### 🎮 Yeni Modlar: Splitscreen ve LAN (v0.6.x - v0.7.x)
+### 🎮 Yeni Modlar: Kralı Koru, Splitscreen ve LAN (v0.6.x - v0.7.x)
+- **Farklı Oyun Modları (Kralı Koru)**: Klasik üs yıkmanın yanı sıra, haritadaki VIP'yi veya objeyi kendi üssüne ilk götürenin kazandığı "Kralı Koru" (VIP Modu) gibi alternatif eğlenceli oyun modları.
 - **Yerel Çok Oyunculu (Splitscreen)**: Aynı ekranda, aynı bilgisayar üzerinde birden fazla kişiyle oynayabilme.
 - **Offline & LAN**: İnternet bağlantısı olmadan LAN (Yerel Ağ) üzerinden arkadaşlar arası sıfır gecikmeli sunucu kurma ve katılma özellikleri.
 
