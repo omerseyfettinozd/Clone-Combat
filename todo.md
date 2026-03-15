@@ -2,6 +2,17 @@
 
 Bu dosya, projedeki ilerlemeyi takip edebilmek üzere düzenlenmiş, onay kutulu (checkbox) bir kontrol listesidir.
 
+## ✅ Tamamlanmış Görevler (Completed)
+- [x] Unity Netcode, Relay ve Lobby ile temel çok oyunculu altyapı kuruldu.
+- [x] 128Hz Tick Rate entegrasyonu ve ağ optimizasyonları (NetworkTransform vb.) tamamlandı.
+- [x] "Input-Based" Ghost (Hayalet) kayıt ve oynatma mekaniği başarıyla uygulandı.
+- [x] Silah satın alınabilen oyun içi ekonomi (Ölüm Mağazası - Coin) sistemi eklendi.
+- [x] Silah türleri (Pistol, Assault, Sniper) ve bunların mermi, ateş senkronizasyonları ayarlandı.
+- [x] Takım renk sistemi (Host: Mavi, Client: Kırmızı) oluşturuldu.
+- [x] Ölüm anında sabit kalan, doğuştan itibaren SmoothDamp ile oyuncuyu izleyen Kamera Sistemi eklendi.
+- [x] Vuruş hissini artırmak için "Hit Marker" entegrasyonu yapıldı.
+- [x] Oyun kazanma amacı olan "Üs (Base) Yıkma" mantığı yerleştirildi.
+
 ## 🔥 Öncelikli (Yüksek)
 - [ ] Mavi ve Kırmızı takımlar için ayrı ayrı çalışır durumda player prefab'ları hazırlanacak.
 - [ ] Oyun içi UI elementleri (Lobi, Mağaza, HUD) Responsive (tüm ekran çözünürlüklerine duyarlı) hale getirilecek.
